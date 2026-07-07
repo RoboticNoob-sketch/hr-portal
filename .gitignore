@@ -1,0 +1,24 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.DS_Store
+appsettings.Development.json
+*.pfx
+
+# Node / Frontend
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+frontend/.env
+
+# Docker
+*.log
+
+# IDE
+.idea/
+*.iml

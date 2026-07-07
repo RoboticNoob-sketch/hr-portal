@@ -1,0 +1,9 @@
+namespace HR.Domain.Enums;
+
+public enum UserRoleType
+{
+    Admin = 1,
+    HR = 2,
+    Manager = 3,
+    Employee = 4
+}
