@@ -3,7 +3,7 @@ import {
   Typography, Avatar, IconButton, TextField, InputAdornment, MenuItem, CircularProgress,
   Tooltip, Pagination,
 } from '@mui/material';
-import { Search, Visibility } from '@mui/icons-material';
+import { Search, Visibility, Add, Edit } from '@mui/icons-material';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -11,15 +11,22 @@ import { apiClient } from '@/services/apiClient';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { tokens } from '@/theme/tokens';
-import type { ApiResponse, EmployeeListDto, PagedResult, DepartmentDto } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { EmployeeFormDialog } from '@/features/employees/EmployeeFormDialog';
+import type { ApiResponse, EmployeeDetailDto, EmployeeListDto, PagedResult, DepartmentDto } from '@/types';
 import dayjs from 'dayjs';
 
 export default function EmployeesPage() {
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const canManage = hasRole(['Admin', 'HR']);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
+  const [editEmployee, setEditEmployee] = useState<EmployeeDetailDto | undefined>();
 
   const { data: departments } = useQuery({
     queryKey: ['departments', 'active'],
@@ -39,11 +46,34 @@ export default function EmployeesPage() {
     },
   });
 
+  const openCreate = () => {
+    setDialogMode('create');
+    setEditEmployee(undefined);
+    setDialogOpen(true);
+  };
+
+  const openEdit = async (emp: EmployeeListDto) => {
+    const { data } = await apiClient.get<ApiResponse<EmployeeDetailDto>>(`/api/employees/${emp.id}`);
+    setDialogMode('edit');
+    setEditEmployee(data.data!);
+    setDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditEmployee(undefined);
+  };
+
   return (
     <Box>
       <PageHeader
         title="Employee Directory"
         subtitle={`${data?.totalCount ?? 0} employees`}
+        actions={canManage && (
+          <Button variant="contained" startIcon={<Add />} onClick={openCreate}>
+            Add Employee
+          </Button>
+        )}
       />
 
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
@@ -113,6 +143,13 @@ export default function EmployeesPage() {
                               <Visibility sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
+                          {canManage && (
+                            <Tooltip title="Edit">
+                              <IconButton size="small" onClick={() => openEdit(emp)}>
+                                <Edit sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -128,6 +165,16 @@ export default function EmployeesPage() {
           )}
         </CardContent>
       </Card>
+
+      <EmployeeFormDialog
+        open={dialogOpen}
+        mode={dialogMode}
+        employee={editEmployee}
+        onClose={closeDialog}
+        onSuccess={(saved) => {
+          if (dialogMode === 'create') navigate(`/employees/${saved.id}`);
+        }}
+      />
     </Box>
   );
 }

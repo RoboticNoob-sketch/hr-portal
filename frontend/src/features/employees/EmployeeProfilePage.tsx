@@ -4,7 +4,9 @@ import {
 } from '@mui/material';
 import { ArrowBack, Edit, Email, Phone, LocationOn, Badge, Business, WorkOutline } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { EmployeeFormDialog } from '@/features/employees/EmployeeFormDialog';
 import { apiClient } from '@/services/apiClient';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { tokens } from '@/theme/tokens';
@@ -24,8 +26,10 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 export default function EmployeeProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { hasRole } = useAuth();
   const canEdit = hasRole(['Admin', 'HR']);
+  const [editOpen, setEditOpen] = useState(false);
 
   const { data: employee, isLoading, error } = useQuery({
     queryKey: ['employee', id],
@@ -58,7 +62,7 @@ export default function EmployeeProfilePage() {
           <Typography variant="body2" color="text.secondary">{employee.employeeNumber}</Typography>
         </Box>
         {canEdit && (
-          <Button variant="outlined" startIcon={<Edit />} disabled>
+          <Button variant="outlined" startIcon={<Edit />} onClick={() => setEditOpen(true)}>
             Edit Profile
           </Button>
         )}
@@ -147,6 +151,16 @@ export default function EmployeeProfilePage() {
             </Card>
         </Box>
       </Box>
+
+      {employee && (
+        <EmployeeFormDialog
+          open={editOpen}
+          mode="edit"
+          employee={employee}
+          onClose={() => setEditOpen(false)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['employee', id] })}
+        />
+      )}
     </Box>
   );
 }
