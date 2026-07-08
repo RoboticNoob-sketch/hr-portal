@@ -13,6 +13,10 @@ using HR.Application.Features.Notifications.Interfaces;
 using HR.Application.Features.Notifications.Services;
 using HR.Application.Features.Positions.Interfaces;
 using HR.Application.Features.Positions.Services;
+using HR.Application.Features.Attendance.Interfaces;
+using HR.Application.Features.Attendance.Services;
+using HR.Application.Features.Leave.Interfaces;
+using HR.Application.Features.Leave.Services;
 using HR.Application.Features.Auth.Validators;
 using HR.Application.Features.Users.Interfaces;
 using HR.Application.Features.Users.Services;
@@ -34,6 +38,8 @@ public static class DependencyInjection
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IPositionService, PositionService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
+        services.AddScoped<IAttendanceService, AttendanceService>();
+        services.AddScoped<ILeaveService, LeaveService>();
 
         return services;
     }

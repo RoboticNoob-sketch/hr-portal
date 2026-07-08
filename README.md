@@ -64,7 +64,7 @@ hr-portal/
 
 - **Phase 1** ✅ Auth, Users, Roles, Dashboards (HR + Employee)
 - **Phase 2** ✅ Employee Management, Departments, Positions
-- **Phase 3** Attendance, Leave Management
+- **Phase 3** ✅ Attendance, Leave Management
 - **Phase 4** Payroll
 - **Phase 5** Recruitment, Onboarding
 - **Phase 6** Documents, Assets

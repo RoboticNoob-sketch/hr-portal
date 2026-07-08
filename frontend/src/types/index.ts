@@ -220,3 +220,57 @@ export interface EmployeeDetailDto {
 }
 
 export const EMPLOYMENT_STATUSES = ['Active', 'Inactive', 'Resigned', 'Terminated', 'OnLeave', 'Probationary'] as const;
+
+export interface AttendanceDto {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeNumber?: string;
+  departmentName?: string;
+  date: string;
+  clockIn?: string;
+  clockOut?: string;
+  totalHours?: string;
+  overtimeHours?: string;
+  undertimeHours?: string;
+  isLate: boolean;
+  notes?: string;
+  shiftName?: string;
+}
+
+export interface TodayAttendanceStatusDto {
+  today?: AttendanceDto;
+  canClockIn: boolean;
+  canClockOut: boolean;
+}
+
+export interface LeaveBalanceDto {
+  id: string;
+  employeeId: string;
+  leaveType: string;
+  year: number;
+  totalEntitlement: number;
+  usedDays: number;
+  pendingDays: number;
+  remainingDays: number;
+}
+
+export interface LeaveRequestDto {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  departmentName?: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  reason: string;
+  status: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  createdAt: string;
+}
+
+export const LEAVE_TYPES = ['Vacation', 'Sick', 'Emergency', 'Casual', 'Maternity', 'Paternity'] as const;
+export const LEAVE_STATUSES = ['Pending', 'Approved', 'Rejected', 'Cancelled'] as const;

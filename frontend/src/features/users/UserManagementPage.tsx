@@ -38,10 +38,7 @@ import { StatusChip } from '@/components/ui/StatusChip';
 import { tokens } from '@/theme/tokens';
 import type { PagedResult, UserListDto, ApiResponse } from '@/types';
 import { toast } from 'react-toastify';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-
-dayjs.extend(relativeTime);
+import dayjs from '@/utils/dayjs';
 
 const createUserSchema = z.object({
   email: z.string().email(),

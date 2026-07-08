@@ -26,7 +26,7 @@ const EmployeeProfilePage = lazy(() => import('@/features/employees/EmployeeProf
 const DepartmentsPage = lazy(() => import('@/features/departments/DepartmentsPage'));
 const PositionsPage = lazy(() => import('@/features/positions/PositionsPage'));
 
-// Phase 3+ placeholders
+// Phase 3 — Attendance & Leave
 const AttendancePage = lazy(() => import('@/features/attendance/AttendancePage'));
 const LeavePage = lazy(() => import('@/features/leave/LeavePage'));
 const PayrollPage = lazy(() => import('@/features/payroll/PayrollPage'));

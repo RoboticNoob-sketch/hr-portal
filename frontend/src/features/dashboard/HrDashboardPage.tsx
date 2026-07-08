@@ -21,17 +21,15 @@ import {
   PersonAdd,
   Event,
 } from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '@/services/apiClient';
 import { StatCard } from '@/components/ui/StatCard';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { tokens } from '@/theme/tokens';
 import type { HrDashboardDto, ApiResponse } from '@/types';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-
-dayjs.extend(relativeTime);
+import { toast } from 'react-toastify';
 
 function useHrDashboard() {
   return useQuery({
@@ -43,6 +41,16 @@ function useHrDashboard() {
   });
 }
 
+const emptyDashboard: HrDashboardDto = {
+  totalEmployees: 0,
+  activeHirings: 0,
+  pendingLeaveRequests: 0,
+  payrollStatus: '—',
+  recentActivities: [],
+  pendingApprovals: [],
+  attendanceSummary: { bars: [] },
+};
+
 const activityIconMap: Record<string, React.ReactNode> = {
   person: <PersonAdd sx={{ fontSize: 16 }} />,
   check: <CheckCircle sx={{ fontSize: 16 }} />,
@@ -51,13 +59,32 @@ const activityIconMap: Record<string, React.ReactNode> = {
 };
 
 export default function HrDashboardPage() {
-  const { data, isLoading } = useHrDashboard();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: rawData, isLoading, isError } = useHrDashboard();
+  const data = rawData ?? emptyDashboard;
+  const chartBars = data.attendanceSummary?.bars ?? [];
+  const recentActivities = data.recentActivities ?? [];
+  const pendingApprovals = data.pendingApprovals ?? [];
+
+  const reviewMutation = useMutation({
+    mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
+      apiClient.post(`/api/leave/requests/${id}/review`, { approve }),
+    onSuccess: (_, { approve }) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['leave'] });
+      toast.success(approve ? 'Leave approved.' : 'Leave rejected.');
+    },
+    onError: (err: unknown) => {
+      toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Review failed.');
+    },
+  });
 
   return (
     <Box>
       <PageHeader
         title="System Overview"
-        subtitle="Welcome back. Here's what's happening today."
+        subtitle={isError ? 'Unable to load dashboard data. Showing empty state.' : "Welcome back. Here's what's happening today."}
       />
 
       {/* Stat Cards Grid */}
@@ -109,17 +136,25 @@ export default function HrDashboardPage() {
             </Box>
             {isLoading ? (
               <Skeleton variant="rectangular" height={230} />
+            ) : chartBars.length === 0 ? (
+              <Box sx={{ height: 230, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography color="text.secondary">No attendance data yet.</Typography>
+              </Box>
             ) : (
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', height: 230 }}>
-                {data?.attendanceSummary.bars.map((bar) => (
+                {chartBars.map((bar) => {
+                  const presentHeight = Math.max(4, Math.round((bar.present / 100) * 180));
+                  const absentHeight = Math.max(4, Math.round((bar.absent / 100) * 180));
+                  return (
                   <Box key={bar.month} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
                     <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5, flex: 1, justifyContent: 'flex-end' }}>
-                      <Box sx={{ width: '40%', mx: 'auto', height: `${bar.present * 2}px`, backgroundColor: tokens.colors.primary, borderRadius: '3px 3px 0 0', minHeight: 4 }} />
-                      <Box sx={{ width: '40%', mx: 'auto', height: `${bar.absent * 4}px`, backgroundColor: tokens.colors.divider, borderRadius: '3px 3px 0 0', minHeight: 4 }} />
+                      <Box sx={{ width: '40%', mx: 'auto', height: `${presentHeight}px`, backgroundColor: tokens.colors.primary, borderRadius: '3px 3px 0 0' }} />
+                      <Box sx={{ width: '40%', mx: 'auto', height: `${absentHeight}px`, backgroundColor: tokens.colors.divider, borderRadius: '3px 3px 0 0' }} />
                     </Box>
                     <Typography variant="caption" color="text.secondary">{bar.month}</Typography>
                   </Box>
-                ))}
+                  );
+                })}
               </Box>
             )}
             <Box sx={{ display: 'flex', gap: 3, mt: 2 }}>
@@ -140,14 +175,16 @@ export default function HrDashboardPage() {
           <CardContent sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Typography variant="h4">Recent Activity</Typography>
-              <Button size="small" sx={{ color: tokens.colors.primary, fontSize: '0.75rem' }}>View All</Button>
+              <Button size="small" sx={{ color: tokens.colors.primary, fontSize: '0.75rem' }} onClick={() => navigate('/leave')}>View All</Button>
             </Box>
             {isLoading ? (
               <Skeleton variant="rectangular" height={200} />
             ) : (
               <Box sx={{ position: 'relative', pl: 2.5 }}>
                 <Box sx={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 2, backgroundColor: tokens.colors.divider }} />
-                {data?.recentActivities.map((act, idx) => (
+                {recentActivities.length === 0 ? (
+                  <Typography color="text.secondary">No recent activity.</Typography>
+                ) : recentActivities.map((act, idx) => (
                   <Box key={idx} sx={{ display: 'flex', gap: 2, mb: 3, position: 'relative' }}>
                     <Box
                       sx={{
@@ -185,8 +222,7 @@ export default function HrDashboardPage() {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 2 }}>
             <Typography variant="h4">Pending Approvals</Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button variant="outlined" size="small">Export</Button>
-              <Button variant="contained" size="small">View All</Button>
+              <Button variant="contained" size="small" onClick={() => navigate('/leave')}>View All</Button>
             </Box>
           </Box>
           {isLoading ? (
@@ -203,14 +239,14 @@ export default function HrDashboardPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data?.pendingApprovals.length === 0 ? (
+                {pendingApprovals.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">No pending approvals</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data?.pendingApprovals.map((row) => (
+                  pendingApprovals.map((row) => (
                     <TableRow key={row.id} hover>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -224,8 +260,8 @@ export default function HrDashboardPage() {
                       <TableCell><Typography variant="body2">{row.type}</Typography></TableCell>
                       <TableCell><StatusChip status={row.status} /></TableCell>
                       <TableCell align="right">
-                        <Button size="small" variant="text" sx={{ color: tokens.colors.primary, mr: 0.5, fontSize: '0.75rem' }}>Approve</Button>
-                        <Button size="small" variant="text" color="error" sx={{ fontSize: '0.75rem' }}>Reject</Button>
+                        <Button size="small" variant="text" sx={{ color: tokens.colors.primary, mr: 0.5, fontSize: '0.75rem' }} disabled={reviewMutation.isPending} onClick={() => reviewMutation.mutate({ id: row.id, approve: true })}>Approve</Button>
+                        <Button size="small" variant="text" color="error" sx={{ fontSize: '0.75rem' }} disabled={reviewMutation.isPending} onClick={() => reviewMutation.mutate({ id: row.id, approve: false })}>Reject</Button>
                       </TableCell>
                     </TableRow>
                   ))

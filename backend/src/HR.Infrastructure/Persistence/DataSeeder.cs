@@ -27,6 +27,9 @@ public class DataSeeder
         await SeedDepartmentsAsync();
         await SeedPositionsAsync();
         await SeedUsersAsync();
+        await SeedManagerLinksAsync();
+        await SeedSampleAttendanceAsync();
+        await SeedSampleLeaveAsync();
         await SeedAnnouncementsAsync();
 
         _logger.LogInformation("Database seeding completed.");
@@ -157,7 +160,186 @@ public class DataSeeder
             await _context.SaveChangesAsync();
         }
 
+        // Link employee to manager for approval workflows
+        var managerEmp = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeNumber == "EMP1002");
+        var employeeEmp = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeNumber == "EMP1003");
+        if (managerEmp is not null && employeeEmp is not null && employeeEmp.ManagerId is null)
+        {
+            employeeEmp.ManagerId = managerEmp.Id;
+            await _context.SaveChangesAsync();
+        }
+
         _logger.LogInformation("Users and employees seeded.");
+    }
+
+    private async Task SeedManagerLinksAsync()
+    {
+        var managerEmp = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeNumber == "EMP1002");
+        var employeeEmp = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeNumber == "EMP1003");
+        if (managerEmp is null || employeeEmp is null || employeeEmp.ManagerId is not null) return;
+
+        employeeEmp.ManagerId = managerEmp.Id;
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Manager relationship seeded.");
+    }
+
+    private async Task SeedSampleAttendanceAsync()
+    {
+        var employees = await _context.Employees.Where(e => !e.IsDeleted).ToListAsync();
+        if (employees.Count == 0) return;
+
+        var today = DateTime.UtcNow.Date;
+
+        if (!await _context.Attendances.AnyAsync())
+        {
+            foreach (var emp in employees)
+            {
+                for (var i = 1; i <= 5; i++)
+                {
+                    var date = today.AddDays(-i);
+                    if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
+
+                    var isLate = emp.EmployeeNumber == "EMP1003" && i == 1;
+                    var hasOvertime = emp.EmployeeNumber == "EMP1002" && i == 2;
+                    var clockIn = date.AddHours(isLate ? 9.5 : 9);
+                    var clockOut = date.AddHours(hasOvertime ? 20 : 18);
+
+                    _context.Attendances.Add(new Attendance
+                    {
+                        EmployeeId = emp.Id,
+                        Date = date,
+                        ClockIn = clockIn,
+                        ClockOut = clockOut,
+                        TotalHours = clockOut - clockIn,
+                        OvertimeHours = hasOvertime ? TimeSpan.FromHours(2) : null,
+                        IsLate = isLate,
+                        ShiftName = "Regular"
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Past attendance records seeded.");
+        }
+
+        if (!await _context.Attendances.AnyAsync(a => a.Date == today))
+        {
+            foreach (var emp in employees)
+            {
+                var clockedIn = emp.EmployeeNumber != "EMP1001";
+                _context.Attendances.Add(new Attendance
+                {
+                    EmployeeId = emp.Id,
+                    Date = today,
+                    ClockIn = clockedIn ? today.AddHours(9) : null,
+                    ClockOut = null,
+                    TotalHours = null,
+                    IsLate = false,
+                    ShiftName = "Regular"
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Today's attendance seeded.");
+        }
+    }
+
+    private async Task SeedSampleLeaveAsync()
+    {
+        if (await _context.LeaveRequests.AnyAsync()) return;
+
+        var employees = await _context.Employees.Where(e => !e.IsDeleted).ToListAsync();
+        var today = DateTime.UtcNow.Date;
+        var john = employees.FirstOrDefault(e => e.EmployeeNumber == "EMP1003");
+        var mike = employees.FirstOrDefault(e => e.EmployeeNumber == "EMP1002");
+
+        if (john is not null)
+        {
+            var pendingStart = today.AddDays(14);
+            while (pendingStart.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                pendingStart = pendingStart.AddDays(1);
+            var pendingEnd = pendingStart.AddDays(2);
+            while (pendingEnd.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                pendingEnd = pendingEnd.AddDays(1);
+
+            var pendingDays = CountWeekdays(pendingStart, pendingEnd);
+
+            _context.LeaveRequests.Add(new LeaveRequest
+            {
+                EmployeeId = john.Id,
+                LeaveType = LeaveType.Vacation,
+                StartDate = pendingStart,
+                EndDate = pendingEnd,
+                TotalDays = pendingDays,
+                Reason = "Family vacation",
+                Status = LeaveStatus.Pending
+            });
+
+            var balance = await _context.LeaveBalances.FirstOrDefaultAsync(b =>
+                b.EmployeeId == john.Id && b.LeaveType == LeaveType.Vacation && b.Year == today.Year);
+            if (balance is not null)
+                balance.PendingDays += pendingDays;
+
+            var approvedStart = today.AddDays(-30);
+            while (approvedStart.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                approvedStart = approvedStart.AddDays(-1);
+            var approvedEnd = approvedStart;
+            var approvedDays = 1;
+
+            _context.LeaveRequests.Add(new LeaveRequest
+            {
+                EmployeeId = john.Id,
+                LeaveType = LeaveType.Sick,
+                StartDate = approvedStart,
+                EndDate = approvedEnd,
+                TotalDays = approvedDays,
+                Reason = "Medical appointment",
+                Status = LeaveStatus.Approved,
+                ReviewedBy = "manager@hrportal.com",
+                ReviewedAt = approvedStart.AddDays(-2),
+                ReviewNotes = "Approved. Get well soon."
+            });
+
+            var sickBalance = await _context.LeaveBalances.FirstOrDefaultAsync(b =>
+                b.EmployeeId == john.Id && b.LeaveType == LeaveType.Sick && b.Year == today.Year);
+            if (sickBalance is not null)
+                sickBalance.UsedDays += approvedDays;
+        }
+
+        if (mike is not null)
+        {
+            var rejectedStart = today.AddDays(-14);
+            while (rejectedStart.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                rejectedStart = rejectedStart.AddDays(-1);
+            var rejectedEnd = rejectedStart.AddDays(4);
+            while (rejectedEnd.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                rejectedEnd = rejectedEnd.AddDays(-1);
+
+            _context.LeaveRequests.Add(new LeaveRequest
+            {
+                EmployeeId = mike.Id,
+                LeaveType = LeaveType.Casual,
+                StartDate = rejectedStart,
+                EndDate = rejectedEnd,
+                TotalDays = CountWeekdays(rejectedStart, rejectedEnd),
+                Reason = "Personal errands",
+                Status = LeaveStatus.Rejected,
+                ReviewedBy = "hr@hrportal.com",
+                ReviewedAt = rejectedStart.AddDays(-3),
+                ReviewNotes = "Insufficient notice for extended casual leave."
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Sample leave data seeded.");
+    }
+
+    private static int CountWeekdays(DateTime start, DateTime end)
+    {
+        var count = 0;
+        for (var d = start; d <= end; d = d.AddDays(1))
+            if (d.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday) count++;
+        return count;
     }
 
     private async Task SeedAnnouncementsAsync()

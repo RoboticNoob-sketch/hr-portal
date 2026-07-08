@@ -11,10 +11,12 @@ import {
 } from '@mui/material';
 import { EventNote, CheckCircle, Announcement, BeachAccess, LocalHospital, AttachMoney } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '@/services/apiClient';
+import { useAttendanceClock } from '@/features/attendance/useAttendanceClock';
 import { tokens } from '@/theme/tokens';
 import type { EmployeeDashboardDto, ApiResponse } from '@/types';
-import dayjs from 'dayjs';
+import dayjs from '@/utils/dayjs';
 
 function useEmployeeDashboard() {
   return useQuery({
@@ -41,7 +43,10 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function EmployeeDashboardPage() {
+  const navigate = useNavigate();
   const { data, isLoading } = useEmployeeDashboard();
+  const { clockInMutation, clockOutMutation } = useAttendanceClock();
+  const isClockedIn = data?.todayAttendance?.isClockedIn;
 
   const todayDate = dayjs().format('dddd, MMMM D, YYYY');
 
@@ -105,7 +110,7 @@ export default function EmployeeDashboardPage() {
                     </Box>
                   </Box>
 
-                  <Button variant="outlined" fullWidth sx={{ borderColor: tokens.colors.divider, color: tokens.colors.textPrimary }}>
+                  <Button variant="outlined" fullWidth sx={{ borderColor: tokens.colors.divider, color: tokens.colors.textPrimary }} onClick={() => data?.profile.employeeId && navigate(`/employees/${data.profile.employeeId}`)}>
                     View Full Profile
                   </Button>
                 </>
@@ -140,16 +145,19 @@ export default function EmployeeDashboardPage() {
                     <Button
                       fullWidth
                       variant="contained"
+                      disabled={isClockedIn ? clockOutMutation.isPending : clockInMutation.isPending}
+                      onClick={() => (isClockedIn ? clockOutMutation : clockInMutation).mutate()}
                       sx={{ backgroundColor: 'white', color: tokens.colors.primary, fontWeight: 600, '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' } }}
                     >
-                      {data?.todayAttendance?.isClockedIn ? 'Clock Out' : 'Clock In'}
+                      {isClockedIn ? 'Clock Out' : 'Clock In'}
                     </Button>
                     <Button
                       fullWidth
                       variant="outlined"
+                      onClick={() => navigate('/attendance')}
                       sx={{ borderColor: 'rgba(255,255,255,0.5)', color: 'white', fontWeight: 600, '&:hover': { borderColor: 'white' } }}
                     >
-                      Break
+                      View Attendance
                     </Button>
                   </Box>
                 </>
@@ -165,13 +173,11 @@ export default function EmployeeDashboardPage() {
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
               {[1, 2, 3].map((i) => <Skeleton key={i} variant="rectangular" height={186} sx={{ borderRadius: `${tokens.borderRadius.card}px` }} />)}
             </Box>
+          ) : data?.leaveBalances.length === 0 ? (
+            <Card><CardContent sx={{ p: 3 }}><Typography color="text.secondary">No leave balances assigned yet.</Typography></CardContent></Card>
           ) : (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
-              {(data?.leaveBalances.length ? data.leaveBalances : [
-                { leaveType: 'Annual', total: 15, used: 8, remaining: 7, pending: 0 },
-                { leaveType: 'Sick', total: 15, used: 0, remaining: 15, pending: 0 },
-                { leaveType: 'Casual', total: 5, used: 2, remaining: 3, pending: 0 },
-              ]).map((lb) => (
+              {data?.leaveBalances.map((lb) => (
                 <Card key={lb.leaveType}>
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
@@ -209,7 +215,7 @@ export default function EmployeeDashboardPage() {
               <CardContent sx={{ p: 0 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 3, pb: 2, borderBottom: `1px solid ${tokens.colors.divider}` }}>
                   <Typography variant="h4">Announcements</Typography>
-                  <Button size="small" sx={{ color: tokens.colors.primary, fontSize: '0.75rem' }}>See All</Button>
+                  <Button size="small" sx={{ color: tokens.colors.primary, fontSize: '0.75rem' }} onClick={() => navigate('/announcements')}>See All</Button>
                 </Box>
                 <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {isLoading ? (
@@ -254,16 +260,17 @@ export default function EmployeeDashboardPage() {
                 <Typography variant="h4" gutterBottom>Quick Actions</Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 2 }}>
                   {[
-                    { label: 'Apply for Leave', icon: <BeachAccess /> },
-                    { label: 'View Payslip', icon: <AttachMoney /> },
-                    { label: 'View Attendance', icon: <EventNote /> },
-                    { label: 'Update Profile', icon: <CheckCircle /> },
-                  ].map(({ label, icon }) => (
+                    { label: 'Apply for Leave', icon: <BeachAccess />, path: '/leave' },
+                    { label: 'View Payslip', icon: <AttachMoney />, path: '/payroll' },
+                    { label: 'View Attendance', icon: <EventNote />, path: '/attendance' },
+                    { label: 'Update Profile', icon: <CheckCircle />, path: data?.profile.employeeId ? `/employees/${data.profile.employeeId}` : '/dashboard/employee' },
+                  ].map(({ label, icon, path }) => (
                     <Button
                       key={label}
                       variant="outlined"
                       startIcon={icon}
                       fullWidth
+                      onClick={() => navigate(path)}
                       sx={{
                         justifyContent: 'flex-start',
                         borderColor: tokens.colors.divider,
@@ -292,5 +299,3 @@ function getTimeOfDay() {
   if (hour < 17) return 'afternoon';
   return 'evening';
 }
-
-// Import missing icon
