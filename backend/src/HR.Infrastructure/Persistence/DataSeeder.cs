@@ -25,6 +25,7 @@ public class DataSeeder
 
         await SeedRolesAsync();
         await SeedDepartmentsAsync();
+        await SeedPositionsAsync();
         await SeedUsersAsync();
         await SeedAnnouncementsAsync();
 
@@ -66,6 +67,26 @@ public class DataSeeder
         _logger.LogInformation("Departments seeded.");
     }
 
+    private async Task SeedPositionsAsync()
+    {
+        if (await _context.Positions.AnyAsync()) return;
+
+        var hrDept = await _context.Departments.FirstAsync(d => d.Code == "HR");
+        var engDept = await _context.Departments.FirstAsync(d => d.Code == "ENG");
+        var finDept = await _context.Departments.FirstAsync(d => d.Code == "FIN");
+
+        _context.Positions.AddRange(
+            new Position { Title = "HR Manager", DepartmentId = hrDept.Id, MinSalary = 50000, MaxSalary = 80000, SalaryGrade = "M3", IsActive = true },
+            new Position { Title = "HR Specialist", DepartmentId = hrDept.Id, MinSalary = 30000, MaxSalary = 45000, SalaryGrade = "P3", IsActive = true },
+            new Position { Title = "Software Engineer", DepartmentId = engDept.Id, MinSalary = 45000, MaxSalary = 90000, SalaryGrade = "P4", IsActive = true },
+            new Position { Title = "Engineering Manager", DepartmentId = engDept.Id, MinSalary = 70000, MaxSalary = 120000, SalaryGrade = "M4", IsActive = true },
+            new Position { Title = "Accountant", DepartmentId = finDept.Id, MinSalary = 35000, MaxSalary = 55000, SalaryGrade = "P3", IsActive = true }
+        );
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Positions seeded.");
+    }
+
     private async Task SeedUsersAsync()
     {
         if (await _context.Users.AnyAsync()) return;
@@ -73,6 +94,9 @@ public class DataSeeder
         var roles = await _context.Roles.ToListAsync();
         var hrDept = await _context.Departments.FirstAsync(d => d.Code == "HR");
         var engDept = await _context.Departments.FirstAsync(d => d.Code == "ENG");
+        var hrManager = await _context.Positions.FirstAsync(p => p.Title == "HR Manager");
+        var engManager = await _context.Positions.FirstAsync(p => p.Title == "Engineering Manager");
+        var softwareEng = await _context.Positions.FirstAsync(p => p.Title == "Software Engineer");
 
         var seedUsers = new[]
         {
@@ -96,6 +120,12 @@ public class DataSeeder
             if (roleName != "Admin")
             {
                 var dept = roleName == "HR" ? hrDept : engDept;
+                var position = roleName switch
+                {
+                    "HR" => hrManager,
+                    "Manager" => engManager,
+                    _ => softwareEng
+                };
                 var emp = new Employee
                 {
                     UserId = user.Id,
@@ -104,7 +134,8 @@ public class DataSeeder
                     LastName = last,
                     HireDate = DateTime.UtcNow.AddYears(-2),
                     Status = EmploymentStatus.Active,
-                    DepartmentId = dept.Id
+                    DepartmentId = dept.Id,
+                    PositionId = position.Id
                 };
                 _context.Employees.Add(emp);
 

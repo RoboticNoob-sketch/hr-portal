@@ -20,8 +20,13 @@ const UserManagementPage = lazy(() => import('@/features/users/UserManagementPag
 // Announcements
 const AnnouncementsPage = lazy(() => import('@/features/announcements/AnnouncementsPage'));
 
-// Phase 2+ placeholders
+// Phase 2 — Employee Management
 const EmployeesPage = lazy(() => import('@/features/employees/EmployeesPage'));
+const EmployeeProfilePage = lazy(() => import('@/features/employees/EmployeeProfilePage'));
+const DepartmentsPage = lazy(() => import('@/features/departments/DepartmentsPage'));
+const PositionsPage = lazy(() => import('@/features/positions/PositionsPage'));
+
+// Phase 3+ placeholders
 const AttendancePage = lazy(() => import('@/features/attendance/AttendancePage'));
 const LeavePage = lazy(() => import('@/features/leave/LeavePage'));
 const PayrollPage = lazy(() => import('@/features/payroll/PayrollPage'));
@@ -86,7 +91,38 @@ export function AppRoutes() {
             }
           />
           <Route path="/announcements" element={<AnnouncementsPage />} />
-          <Route path="/employees" element={<EmployeesPage />} />
+          <Route
+            path="/employees"
+            element={
+              <ProtectedRoute roles={['Admin', 'HR', 'Manager']}>
+                <EmployeesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employees/:id"
+            element={
+              <ProtectedRoute roles={['Admin', 'HR', 'Manager', 'Employee']}>
+                <EmployeeProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/departments"
+            element={
+              <ProtectedRoute roles={['Admin', 'HR']}>
+                <DepartmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/positions"
+            element={
+              <ProtectedRoute roles={['Admin', 'HR']}>
+                <PositionsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/attendance" element={<AttendancePage />} />
           <Route path="/leave" element={<LeavePage />} />
           <Route path="/payroll" element={<PayrollPage />} />

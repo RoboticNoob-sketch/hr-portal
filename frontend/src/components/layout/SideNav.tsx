@@ -20,6 +20,8 @@ import {
   Logout,
   Announcement,
   PersonAdd,
+  Business,
+  Badge,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -35,6 +37,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: <Dashboard /> },
   { label: 'Employees', path: '/employees', icon: <People />, roles: ['Admin', 'HR', 'Manager'] },
+  { label: 'Departments', path: '/departments', icon: <Business />, roles: ['Admin', 'HR'] },
+  { label: 'Positions', path: '/positions', icon: <Badge />, roles: ['Admin', 'HR'] },
   { label: 'Attendance', path: '/attendance', icon: <EventNote /> },
   { label: 'Leave', path: '/leave', icon: <WorkOutline /> },
   { label: 'Payroll', path: '/payroll', icon: <AttachMoney />, roles: ['Admin', 'HR'] },
@@ -51,6 +55,7 @@ export function SideNav() {
 
   const isActive = (path: string) => {
     if (path === '/dashboard') return location.pathname.startsWith('/dashboard');
+    if (path === '/employees') return location.pathname.startsWith('/employees');
     return location.pathname.startsWith(path);
   };
 

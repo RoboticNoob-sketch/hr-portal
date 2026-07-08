@@ -138,3 +138,85 @@ export interface NotificationDto {
   actionUrl?: string;
   createdAt: string;
 }
+
+export interface DepartmentDto {
+  id: string;
+  name: string;
+  description?: string;
+  code?: string;
+  isActive: boolean;
+  headEmployeeId?: string;
+  headEmployeeName?: string;
+  employeeCount: number;
+  positionCount: number;
+  createdAt: string;
+}
+
+export interface PositionDto {
+  id: string;
+  title: string;
+  description?: string;
+  minSalary: number;
+  maxSalary: number;
+  salaryGrade?: string;
+  isActive: boolean;
+  departmentId: string;
+  departmentName: string;
+  employeeCount: number;
+  createdAt: string;
+}
+
+export interface EmployeeListDto {
+  id: string;
+  employeeNumber: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  departmentName?: string;
+  positionTitle?: string;
+  status: string;
+  hireDate: string;
+  isActive: boolean;
+}
+
+export interface EmployeeDetailDto {
+  id: string;
+  userId: string;
+  employeeNumber: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  suffix?: string;
+  email: string;
+  dateOfBirth?: string;
+  gender?: string;
+  civilStatus?: string;
+  nationality?: string;
+  phoneNumber?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  zipCode?: string;
+  profilePhotoUrl?: string;
+  hireDate: string;
+  regularizationDate?: string;
+  resignationDate?: string;
+  status: string;
+  employmentType?: string;
+  departmentId?: string;
+  departmentName?: string;
+  positionId?: string;
+  positionTitle?: string;
+  managerId?: string;
+  managerName?: string;
+  sssNumber?: string;
+  philHealthNumber?: string;
+  pagIbigNumber?: string;
+  tinNumber?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const EMPLOYMENT_STATUSES = ['Active', 'Inactive', 'Resigned', 'Terminated', 'OnLeave', 'Probationary'] as const;
