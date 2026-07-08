@@ -41,7 +41,7 @@ const navItems: NavItem[] = [
   { label: 'Positions', path: '/positions', icon: <Badge />, roles: ['Admin', 'HR'] },
   { label: 'Attendance', path: '/attendance', icon: <EventNote /> },
   { label: 'Leave', path: '/leave', icon: <WorkOutline /> },
-  { label: 'Payroll', path: '/payroll', icon: <AttachMoney />, roles: ['Admin', 'HR'] },
+  { label: 'Payroll', path: '/payroll', icon: <AttachMoney /> },
   { label: 'Recruitment', path: '/recruitment', icon: <PersonAdd />, roles: ['Admin', 'HR'] },
   { label: 'Announcements', path: '/announcements', icon: <Announcement /> },
   { label: 'Reports', path: '/reports', icon: <BarChart />, roles: ['Admin', 'HR', 'Manager'] },

@@ -16,6 +16,7 @@ public class DashboardService : IDashboardService
     private readonly IRepository<LeaveBalance> _leaveBalanceRepo;
     private readonly IRepository<Department> _deptRepo;
     private readonly IRepository<Position> _positionRepo;
+    private readonly IRepository<PayrollRecord> _payrollRepo;
 
     public DashboardService(
         IRepository<Employee> employeeRepo,
@@ -24,7 +25,8 @@ public class DashboardService : IDashboardService
         IRepository<AttendanceEntity> attendanceRepo,
         IRepository<LeaveBalance> leaveBalanceRepo,
         IRepository<Department> deptRepo,
-        IRepository<Position> positionRepo)
+        IRepository<Position> positionRepo,
+        IRepository<PayrollRecord> payrollRepo)
     {
         _employeeRepo = employeeRepo;
         _leaveRepo = leaveRepo;
@@ -33,6 +35,7 @@ public class DashboardService : IDashboardService
         _leaveBalanceRepo = leaveBalanceRepo;
         _deptRepo = deptRepo;
         _positionRepo = positionRepo;
+        _payrollRepo = payrollRepo;
     }
 
     public async Task<HrDashboardDto> GetHrDashboardAsync(CancellationToken cancellationToken = default)
@@ -43,12 +46,13 @@ public class DashboardService : IDashboardService
         var pendingApprovals = await BuildPendingApprovalsAsync(cancellationToken);
         var recentActivities = await BuildRecentActivitiesAsync(cancellationToken);
         var attendanceSummary = await BuildAttendanceSummaryAsync(totalEmployees, cancellationToken);
+        var payrollStatus = await BuildPayrollStatusAsync(totalEmployees, cancellationToken);
 
         return new HrDashboardDto(
             totalEmployees,
             0,
             pendingLeave,
-            pendingLeave == 0 ? "Ready" : "Pending",
+            payrollStatus,
             recentActivities,
             pendingApprovals,
             attendanceSummary
@@ -229,6 +233,20 @@ public class DashboardService : IDashboardService
         }
 
         return new AttendanceSummaryDto(bars);
+    }
+
+    private async Task<string> BuildPayrollStatusAsync(int totalEmployees, CancellationToken cancellationToken)
+    {
+        if (totalEmployees == 0) return "No Employees";
+
+        var now = DateTime.UtcNow;
+        var records = (await _payrollRepo.FindAsync(
+            p => !p.IsDeleted && p.PeriodYear == now.Year && p.PeriodMonth == now.Month, cancellationToken)).ToList();
+
+        if (records.Count == 0) return "Not Processed";
+        if (records.All(r => r.Status == PayrollStatus.Paid)) return "Paid";
+        if (records.Any(r => r.Status == PayrollStatus.Processed)) return "Processed";
+        return records.Count >= totalEmployees ? "Ready" : "In Progress";
     }
 
     private static int CountWeekdays(DateTime start, DateTime end)

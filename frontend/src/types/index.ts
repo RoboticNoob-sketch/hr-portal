@@ -274,3 +274,42 @@ export interface LeaveRequestDto {
 
 export const LEAVE_TYPES = ['Vacation', 'Sick', 'Emergency', 'Casual', 'Maternity', 'Paternity'] as const;
 export const LEAVE_STATUSES = ['Pending', 'Approved', 'Rejected', 'Cancelled'] as const;
+
+export interface PayrollRecordDto {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeNumber?: string;
+  departmentName?: string;
+  periodYear: number;
+  periodMonth: number;
+  basicSalary: number;
+  allowances: number;
+  overtimePay: number;
+  sssDeduction: number;
+  philHealthDeduction: number;
+  pagIbigDeduction: number;
+  taxDeduction: number;
+  otherDeductions: number;
+  grossPay: number;
+  totalDeductions: number;
+  netPay: number;
+  status: string;
+  processedAt?: string;
+  processedBy?: string;
+  paidAt?: string;
+  createdAt: string;
+}
+
+export interface PayrollSummaryDto {
+  periodYear: number;
+  periodMonth: number;
+  totalEmployees: number;
+  processedCount: number;
+  paidCount: number;
+  totalGrossPay: number;
+  totalNetPay: number;
+  totalDeductions: number;
+}
+
+export const PAYROLL_STATUSES = ['Draft', 'Processed', 'Paid', 'Cancelled'] as const;

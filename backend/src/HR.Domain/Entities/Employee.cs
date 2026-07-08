@@ -50,6 +50,7 @@ public class Employee : BaseEntity
     public ICollection<LeaveRequest> LeaveRequests { get; set; } = new List<LeaveRequest>();
     public ICollection<LeaveBalance> LeaveBalances { get; set; } = new List<LeaveBalance>();
     public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
+    public ICollection<PayrollRecord> PayrollRecords { get; set; } = new List<PayrollRecord>();
 
     public string FullName => $"{FirstName} {MiddleName} {LastName}".Replace("  ", " ").Trim();
 }

@@ -11,7 +11,9 @@ const statusConfig: Record<string, { bg: string; color: string; label: string }>
   Pending: { bg: tokens.colors.chipOrange, color: tokens.colors.chipOrangeText, label: 'Pending' },
   Approved: { bg: tokens.colors.chipGreen, color: tokens.colors.chipGreenText, label: 'Approved' },
   Rejected: { bg: tokens.colors.chipRed, color: tokens.colors.chipRedText, label: 'Rejected' },
-  Ready: { bg: tokens.colors.chipGreen, color: tokens.colors.chipGreenText, label: 'Ready' },
+  Processed: { bg: tokens.colors.chipOrange, color: tokens.colors.chipOrangeText, label: 'Processed' },
+  Paid: { bg: tokens.colors.chipGreen, color: tokens.colors.chipGreenText, label: 'Paid' },
+  Cancelled: { bg: tokens.colors.chipRed, color: tokens.colors.chipRedText, label: 'Cancelled' },
 };
 
 export function StatusChip({ status }: StatusChipProps) {

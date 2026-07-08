@@ -30,6 +30,7 @@ public class DataSeeder
         await SeedManagerLinksAsync();
         await SeedSampleAttendanceAsync();
         await SeedSampleLeaveAsync();
+        await SeedSamplePayrollAsync();
         await SeedAnnouncementsAsync();
 
         _logger.LogInformation("Database seeding completed.");
@@ -340,6 +341,64 @@ public class DataSeeder
         for (var d = start; d <= end; d = d.AddDays(1))
             if (d.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday) count++;
         return count;
+    }
+
+    private async Task SeedSamplePayrollAsync()
+    {
+        if (await _context.PayrollRecords.AnyAsync()) return;
+
+        var employees = await _context.Employees.Where(e => !e.IsDeleted && e.Status == EmploymentStatus.Active).ToListAsync();
+        if (employees.Count == 0) return;
+
+        var positions = await _context.Positions.Where(p => !p.IsDeleted).ToListAsync();
+        var now = DateTime.UtcNow;
+        var periods = new[] { now.AddMonths(-1), now.AddMonths(-2) };
+
+        foreach (var period in periods)
+        {
+            foreach (var employee in employees)
+            {
+                var position = employee.PositionId.HasValue
+                    ? positions.FirstOrDefault(p => p.Id == employee.PositionId.Value)
+                    : null;
+                var basicSalary = position is not null
+                    ? Math.Round((position.MinSalary + position.MaxSalary) / 2m, 2)
+                    : 35000m;
+                var allowances = Math.Round(basicSalary * 0.05m, 2);
+                var sss = Math.Round(basicSalary * 0.045m, 2);
+                var philHealth = Math.Round(Math.Max(basicSalary * 0.03m, 400m), 2);
+                var pagIbig = Math.Round(Math.Min(basicSalary * 0.02m, 200m), 2);
+                var tax = basicSalary > 50000m ? Math.Round((basicSalary - 50000m) * 0.20m, 2) : 0m;
+                var grossPay = basicSalary + allowances;
+                var totalDeductions = sss + philHealth + pagIbig + tax;
+                var isPaid = period.Month != now.Month;
+
+                _context.PayrollRecords.Add(new PayrollRecord
+                {
+                    EmployeeId = employee.Id,
+                    PeriodYear = period.Year,
+                    PeriodMonth = period.Month,
+                    BasicSalary = basicSalary,
+                    Allowances = allowances,
+                    OvertimePay = 0,
+                    SssDeduction = sss,
+                    PhilHealthDeduction = philHealth,
+                    PagIbigDeduction = pagIbig,
+                    TaxDeduction = tax,
+                    OtherDeductions = 0,
+                    GrossPay = grossPay,
+                    TotalDeductions = totalDeductions,
+                    NetPay = grossPay - totalDeductions,
+                    Status = isPaid ? PayrollStatus.Paid : PayrollStatus.Processed,
+                    ProcessedAt = period,
+                    ProcessedBy = "hr@hrportal.com",
+                    PaidAt = isPaid ? period.AddDays(5) : null
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Sample payroll records seeded.");
     }
 
     private async Task SeedAnnouncementsAsync()
